@@ -10,14 +10,14 @@ load_dotenv()
 
 def find_ebooks_in_calibre_library(calibre_library_path, supported_formats=None):
     """
-    Scans the Calibre library directory and retrieves all ebook files.
+    Scans the Calibre library directory and retrieves ebook files that haven't been processed yet.
 
     Parameters:
         calibre_library_path (str): Path to the Calibre library folder.
         supported_formats (list, optional): List of supported file extensions to include (e.g., ['epub', 'mobi', 'pdf']).
 
     Returns:
-        list: List of full file paths to the ebooks found.
+        list: List of full file paths to the unprocessed ebooks found.
     """
     if supported_formats is None:
         supported_formats = ['epub', 'mobi', 'pdf', 'azw3', 'fb2']  # Default formats
@@ -27,8 +27,19 @@ def find_ebooks_in_calibre_library(calibre_library_path, supported_formats=None)
     print("Scanning your Calibre library...")
     for root, dirs, files in os.walk(calibre_library_path):
         for file in files:
-            if file.split('.')[-1].lower() in supported_formats:
-                ebook_paths.append(os.path.join(root, file))
+            # Get file name and extension
+            file_name, file_ext = os.path.splitext(file)
+            file_ext = file_ext.lower()[1:]  # Remove the dot and convert to lowercase
+            
+            if file_ext in supported_formats:
+                full_path = os.path.join(root, file)
+                
+                # Check if this is not already a processed file
+                if not file_name.endswith('_fastread'):
+                    # Check if a processed version exists
+                    processed_path = os.path.join(root, f"{file_name}_fastread.{file_ext}")
+                    if not os.path.exists(processed_path):
+                        ebook_paths.append(full_path)
 
     return ebook_paths
 
@@ -112,13 +123,13 @@ if __name__ == "__main__":
     # Script name for Bionic Reading (must exist in the same directory as this script)
     bionic_script_name = "apply_bioread.py"
 
-    # Step 1: Find all ebooks in the Calibre library
+    # Step 1: Find all unprocessed ebooks in the Calibre library
     ebook_paths = find_ebooks_in_calibre_library(calibre_library_path)
 
     if not ebook_paths:
-        print("No ebooks found in the specified Calibre library.")
+        print("No unprocessed ebooks found in the specified Calibre library.")
     else:
-        print(f"\nFound {len(ebook_paths)} ebooks in your library.")
+        print(f"\nFound {len(ebook_paths)} unprocessed ebooks in your library.")
 
         # Step 2: Ask the user which books to convert
         selected_books = prompt_user_selection(ebook_paths)
